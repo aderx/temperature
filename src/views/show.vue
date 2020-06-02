@@ -3,7 +3,7 @@
         <div class="show_head">
             <div class="headMsg">
                 <h1 @click="showPage('edit')">
-                    {{list.name}}
+                    {{list.info.name}}（{{list.option.showAllUser ? '公开':'私有'}}）
                     <fa-icon icon="chevron-right" class="right_icon"/>
                 </h1>
                 <p>{{basic.tips}}</p>
@@ -16,7 +16,8 @@
         </div>
         <div class="show_content">
             <div class="show_msg">
-                {{list.msg}}
+                <b>温度阈值：{{getMin}}℃ ~ {{getMax}}℃</b><br>
+                {{list.info.msg}}
             </div>
             <div class="show_temp">
                 <div class="nowTemp">
@@ -55,12 +56,12 @@
             <div class="formItem bigSize">
                 <span>启用监测点</span>
                 <radio
-                        :status="list.run"
+                        :status="list.option.run"
                         @changeStatus="runDev"
                 />
             </div>
         </div>
-        <div class="show_chart">
+        <div class="show_chart" v-if="list.option.openChart || list.uId === loginInfo.uId">
             <v-chart
                     :options="chart"
                     :autoresize="true"
@@ -68,7 +69,6 @@
         </div>
         <msg
                 :config="messageBox"
-                @action="checkBox"
         />
     </div>
 </template>
@@ -87,13 +87,122 @@
         data() {
             return {
                 basic: {
-                    tips: "监测数据截止到当前页面打开时",
+                    tips: "数据非实时刷新，更新数据请点击右侧按钮。",
                     tempColor: "c1c1c1",
                     tempHighColor: "c1c1c1",
                     tempLowerColor: "c1c1c1"
                 },
-                list: {},
-                chart: {},
+                list: {
+                    uId:'',
+                    info:{
+                        name: "",
+                        msg: "",
+                        hCode:'',
+                    },
+                    limit:{
+                        min:'',
+                        max:''
+                    },
+                    show:{
+                      temp:0
+                    },
+                    option:{
+                        showAllUser:true,
+                        openChart: true,
+                    }
+                },
+                loginInfo:false,
+                chart: {
+                    title: {
+                        text: '历史温度变化曲线'
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        formatter: '{b}<br />{a}:{c}℃'
+                    },
+                    xAxis: {
+                        data:[]
+                         ,
+                        position: 'bottom'
+                    },
+                    yAxis: {
+                        splitLine: {
+                            show: false
+                        }
+                    },
+                    grid: {
+                        bottom: 80
+                    },
+                    toolbox: {
+                        top: 0,
+                        right: 0,
+                        orient: "horizontal",
+                        feature: {
+                            dataZoom: {
+                                xAxisIndex: true
+                            },
+                            saveAsImage: {},
+                            restore: {}
+                        }
+                    },
+                    dataZoom: [
+                        {
+                            type: 'slider'
+                        }
+                    ],
+                    visualMap: {
+                        top: 30,
+                        right: 0,
+                        pieces: [
+                            {
+                                max: 0,
+                                symbol: 'circle',
+                                color: '#1890FF'
+                            },
+                            {
+                                min: 0,
+                                max: 20,
+                                symbol: 'circle',
+                                color: '#096'
+                            },
+                            {
+                                min: 20,
+                                max: 30,
+                                symbol: 'circle',
+                                color: '#ff9933'
+                            },
+                            {
+                                min: 30,
+                                max: 40,
+                                symbol: 'circle',
+                                color: '#cc0033'
+                            },
+                            {
+                                min: 40,
+                                max: 50,
+                                symbol: 'circle',
+                                color: '#660099'
+                            },
+                            {
+                                min: 50,
+                                symbol: 'circle',
+                                color: '#7e0023'
+                            }
+                        ],
+                        outOfRange: {
+                            color: '#999',
+                            symbol: 'circle'
+                        },
+                        textStyle:{
+                            fontSize:10
+                        }
+                    },
+                    series: {
+                        name: '温度',
+                        type: 'line',
+                        data:[]
+                    }
+                },
                 messageBox: {
                     show: false
                 }
@@ -101,21 +210,27 @@
         },
         computed: {
             showTemp() {
-                this.changeColor('tempColor', this.list.temp);
-                return this.list.temp;
+                this.changeColor('tempColor', this.list.show.temp);
+                return this.list.show.temp;
             },
             showHighTemp() {
-                this.changeColor('tempHighColor', this.list.highTemp);
-                return this.list.highTemp;
+                this.changeColor('tempHighColor', this.list.show.highestTemp);
+                return this.list.show.highestTemp ? this.list.show.highestTemp :'-';
             },
             showLowerTemp() {
-                this.changeColor('tempLowerColor', this.list.lowerTemp);
-                return this.list.lowerTemp;
+                this.changeColor('tempLowerColor', this.list.show.lowestTemp);
+                return this.list.show.lowestTemp ? this.list.show.lowestTemp :'-';
+            },
+            getMin(){
+                return this.list.limit.min===null ? '-∞': this.list.limit.min;
+            },
+            getMax(){
+                return this.list.limit.max===null ? '∞': this.list.limit.max;
             }
         },
         methods: {
             changeColor(val, temp) {
-                if (this.list.run) {
+                if (this.list.option.run) {
                     if (temp <= 0) {
                         this.basic[val] = "1890FF";
                     } else if (temp <= 20) {
@@ -134,81 +249,23 @@
                 }
             },
             runDev(status) {
-                if (this.list.runLock) {
-                    if (status) {
-                        this.messageBox = {
-                            show: true,
-                            showOk: true,
-                            okText: "提交",
-                            name: "codeOn",
-                            msg: "请输入开启密钥",
-                            input: {
-                                show: true
-                            }
-                        }
-                    } else {
-                        this.messageBox = {
-                            show: true,
-                            showOk: true,
-                            okText: "提交",
-                            name: "codeOff",
-                            msg: "请输入关闭密钥",
-                            input: {
-                                show: true
-                            }
-                        }
-                    }
-                } else {
-                    this.list.run = status;
-                    this.subStatus();
-                }
+                this.list.option.run = status;
+                this.subStatus();
 
             },
             showPage(val) {
                 this.$emit("changeVal", 'page', val, true);
             },
-            checkBox(val, name, inputVal) {
-                if (val) {
-                    this.axios
-                        .post('/api/codeCheck',
-                            {
-                                "devId": this.list.devId,
-                                "name": name,
-                                "value": inputVal
-                            }
-                        )
-                        .then((r) => {
-                            let res = r.data;
-                            if (res.code === 200) {
-                                this.list.run = !this.list.run;
-                            } else {
-                                this.messageBox = {
-                                    show: true,
-                                    cancelText: "好",
-                                    name: "error",
-                                    msg: "验证失败,操作已取消！",
-                                };
-                            }
-                        });
-                } else if (name === "noDev") {
-                    this.$parent.hidePage();
-                }
-            },
             subStatus() {
-                this.axios
-                    .post('/api/status',
-                        {
-                            "devId": this.list.devId,
-                            "name": "run",
-                            "value": this.list.run
-                        }
-                    )
-                    .then((r) => {
-                        let res = r.data;
+                this.$fetch(
+                    'devStatus',
+                    JSON.stringify({uId:this.loginInfo.uId,devId:this.list.devId,run:this.list.option.run}),
+                    res=>{
                         if (res.code !== 200) {
-                            this.list.run = !this.list.run;
+                            this.list.option.run = !this.list.option.run;
                         }
-                    })
+                    }
+                );
             },
             formatTime(t) {
                 const time = new Date(t);
@@ -226,121 +283,20 @@
                 return `${y}-${m}-${d}\n${h}:${mi}:${s}`;
             },
             chartUpdate() {
-                this.axios.post("/api/getChart",
-                    {
-                        devId: this.id
+                this.$fetch(
+                    'getChart',
+                    JSON.stringify({uId:this.loginInfo.uId,devId:this.id}),
+                    res=>{
+                        this.chart.xAxis.data = res.data.map(item => this.formatTime(item['time']));
+                        this.chart.series.data = res.data.map(item => item['temp']);
                     }
-                )
-                    .then(res => {
-                        let response = res.data;
-                        this.chart = {
-                            title: {
-                                text: '历史温度变化曲线'
-                            },
-                            tooltip: {
-                                trigger: 'axis',
-                                formatter: '{b}<br />{a}:{c}℃'
-                            },
-                            xAxis: {
-                                data: response.data.map((item) => {
-                                    return this.formatTime(item['time']);
-                                }),
-                                position: 'bottom'
-                            },
-                            yAxis: {
-                                splitLine: {
-                                    show: false
-                                }
-                            },
-                            grid: {
-                                bottom: 80
-                            },
-                            toolbox: {
-                                top: 0,
-                                right: 0,
-                                orient: "horizontal",
-                                feature: {
-                                    dataZoom: {
-                                        xAxisIndex: true
-                                    },
-                                    saveAsImage: {},
-                                    restore: {}
-                                }
-                            },
-                            dataZoom: [
-                                {
-                                    type: 'slider'
-                                }
-                            ],
-                            visualMap: {
-                                top: 30,
-                                right: 0,
-                                pieces: [
-                                    {
-                                        max: 0,
-                                        symbol: 'circle',
-                                        color: '#1890FF'
-                                    },
-                                    {
-                                        min: 0,
-                                        max: 20,
-                                        symbol: 'circle',
-                                        color: '#096'
-                                    },
-                                    {
-                                        min: 20,
-                                        max: 30,
-                                        symbol: 'circle',
-                                        color: '#ff9933'
-                                    },
-                                    {
-                                        min: 30,
-                                        max: 40,
-                                        symbol: 'circle',
-                                        color: '#cc0033'
-                                    },
-                                    {
-                                        min: 40,
-                                        max: 50,
-                                        symbol: 'circle',
-                                        color: '#660099'
-                                    },
-                                    {
-                                        min: 50,
-                                        symbol: 'circle',
-                                        color: '#7e0023'
-                                    }
-                                ],
-                                outOfRange: {
-                                    color: '#999',
-                                    symbol: 'circle'
-                                },
-                                textStyle:{
-                                    fontSize:10
-                                }
-                            },
-                            series: {
-                                name: '温度',
-                                type: 'line',
-                                data: response.data.map(function (item) {
-                                    return item['temp'];
-                                })
-                            }
-                        }
-                    })
-                    .catch(error => {
-                        console.log(error);
-                    })
+                );
             },
             infoUpdate(callback) {
-                this.axios
-                    .post('/api/getDevInfo',
-                        {
-                            "devId": this.id
-                        }
-                    )
-                    .then((r) => {
-                        let res = r.data;
+                this.$fetch(
+                    'devInfo',
+                    JSON.stringify({uId:this.loginInfo.uId,devId:this.id}),
+                    res=>{
                         if (res.code === 200) {
                             this.list = res.data;
                         } else {
@@ -352,8 +308,11 @@
                             };
                         }
                         callback ? callback(res) : "";
-                    });
-                this.chartUpdate();
+                        if(this.list.option.openChart || this.list.uId === this.loginInfo.uId){
+                            this.chartUpdate();
+                        }
+                    }
+                );
             },
             reLoadPage(e){
                 let t = e.currentTarget;
@@ -376,7 +335,8 @@
             }
         },
         mounted() {
-            this.infoUpdate()
+            this.loginInfo = this.$store.login;
+            this.infoUpdate();
         }
     }
 </script>
@@ -498,19 +458,5 @@
         float:left;
         font-size:2rem;
         text-align: center;
-    }
-
-    .refresh_move{
-        animation: fresh 20s linear infinite;
-        -webkit-animation-fill-mode:both;
-    }
-
-    @keyframes fresh {
-        from{
-            transform: rotateZ(0deg);
-        }
-        to{
-            transform: rotateZ(3600deg);
-        }
     }
 </style>

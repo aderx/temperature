@@ -2,36 +2,70 @@
     <div class="aboutMe">
         <div class="about_head">
             <h1>关于</h1>
-            <p>本页面所有修改仅为本地修改</p>
+            <p>感谢使用多点温度监测系统！</p>
         </div>
         <div class="about_content">
             <div class="card_about">
-                <div class="formItem">
-                    <label>
-                        <span style="width:60%;">本地数据刷新间隔时间</span>
-                        <span class="partTime">{{getTime}} s</span>
-                    </label>
-                </div>
-                <div class="selectTime">
-                    <button @click="changeTime(1000)">1s</button>
-                    <button @click="changeTime(2000)">2s</button>
-                    <button @click="changeTime(5000)">5s</button>
-                    <button @click="changeTime(10000)">10s</button>
-                    <button @click="changeTime(20000)">20s</button>
-                    <button @click="changeTime(30000)">30s</button>
-                    <button @click="changeTime(60000)">60s</button>
-                </div>
-                <div class="formItem">
-                    <span style="width:60%;">已运行监测点优先展示</span>
-                    <radio :status="sort === 'runFirst'" @changeStatus="changeStatus" />
-                </div>
+                <template v-if="loginInfo">
+                    <div class="dividerBar">
+                        <span>您已登录！</span>
+                    </div>
+
+                    <div class="formItem">
+                        <label>
+                            <span>用户名</span>
+                            <input type="text" placeholder="用户名非法" v-model="loginInfo.name" readonly>
+                        </label>
+                    </div>
+                    <div class="formItem">
+                        <label>
+                            <span>用户ID</span>
+                            <input type="text" placeholder="ID非法" v-model="loginInfo.uId" readonly>
+                        </label>
+                    </div>
+                    <div class="formItem">
+                        <label>
+                            <span style="width:60%;">数据刷新间隔时间</span>
+                            <span class="partTime">{{getTime}} s</span>
+                        </label>
+                        <span class="min_tips">数据刷新间隔时间将与服务器同步</span>
+                    </div>
+                    <div class="selectTime">
+                        <button @click="changeTime(1000)">1s</button>
+                        <button @click="changeTime(2000)">2s</button>
+                        <button @click="changeTime(5000)">5s</button>
+                        <button @click="changeTime(10000)">10s</button>
+                        <button @click="changeTime(30000)">30s</button>
+                        <button @click="changeTime(60000)">60s</button>
+                        <button @click="changeTime(90000)">90s</button>
+                        <button @click="changeTime(120000)">120s</button>
+                    </div>
+                    <div class="formItem bigSize">
+                        <span style="width:65%;">只显示我创建的环境</span>
+                        <radio :status="own" name="ownEnv" @changeStatus="changeRadio"/>
+                    </div>
+                    <div class="log_btn">
+                        <button class="del_btn" @click="deLogin">注销登录</button>
+                    </div>
+                </template>
+                <template v-else>
+                    <div class="dividerBar">
+                        <span>请登录后查看更多信息！</span>
+                    </div>
+                </template>
+            </div>
+            <div class="dividerBar">
+                <span>其他信息</span>
+            </div>
+            <div style="text-align: center;border:1px solid #c1c1c1;padding:10px 0;">
+                <b>在系统中您可以点击任何 <fa-icon icon="sync-alt"/> 图标，以立即获取最新数据！</b>
             </div>
             <div class="author">
-                <p>设计与制作 - 张小富</p>
-                <p>前端基础框架 - Vue.js</p>
-                <p>后端基础框架 - Node.js</p>
-                <p>数据库平台 - MongoDB</p>
-                <p>硬件基础平台 - A</p>
+                <p>系统制作信息：</p>
+                <p v-for="(item,index) in author" :key="index">
+                    <span class="author_title">{{item.title}}</span>
+                    <span class="author_value">{{item.value}}</span>
+                </p>
             </div>
         </div>
         <msg
@@ -43,12 +77,36 @@
 <script>
     export default {
         name: "about",
-        props:["time","sort"],
+        props:["own"],
         data(){
             return {
                 messageBox:{
                     show:false
-                }
+                },
+                time:0,
+                loginInfo:false,
+                author:[
+                    {
+                        title:"设计与制作",
+                        value:"张小富"
+                    },
+                    {
+                        title:"前端基础框架",
+                        value:"Vue.js"
+                    },
+                    {
+                        title:"后端基础框架",
+                        value:"Node.js"
+                    },
+                    {
+                        title:"数据库平台",
+                        value:"MongoDB"
+                    },
+                    {
+                        title:"硬件基础平台",
+                        value:"Arduino"
+                    },
+                ]
             }
         },
         computed:{
@@ -58,41 +116,114 @@
         },
         methods:{
             changeTime(num){
-                this.$emit('changeVal','dTime',num);
+                if(num<30000){
+                    this.messageBox = {
+                        show:true,
+                        showOk:true,
+                        okText:"继续修改",
+                        cancelText:"取消修改",
+                        name:"alertTime",
+                        msg:"由于过快的刷新数据，可能会导致您的设备性能下降，因此不建议您选择！",
+                        func:(val,name)=>{
+                            if(val && name === 'alertTime'){
+                                if(num !== this.time){
+                                    this.$fetch(
+                                        'setTime',
+                                        JSON.stringify({
+                                            uId:this.loginInfo.uId,
+                                            time:num
+                                        })
+                                    );
+                                    //存入本地，供所有页面使用
+                                    this.$store.dTime = num;
+                                    this.time = num;
+                                }
+                            }
+                        }
+                    }
+                }else{
+                    if(num !== this.time){
+                        this.$fetch(
+                            'setTime',
+                            JSON.stringify({
+                                uId:this.loginInfo.uId,
+                                time:num
+                            })
+                        );
+                        //存入本地，供所有页面使用
+                        this.$store.dTime = num;
+                        this.time = num;
+                    }
+                }
+
             },
-            changeStatus(status){
+            deLogin(){
+                let that = this;
                 this.messageBox = {
                     show:true,
+                    msg:"请确认是否注销登录？",
+                    cancelText:"取消",
+                    showOk:true,
+                    name:"askBox",
+                    func(status){
+                        if(status){
+                            setTimeout(()=>{
+                                that.loginInfo = false;
+                                //解除首页登录状态
+                                that.$store.login = '';
+                                that.$parent.hidePage(function(){
+                                    this.loginInfo = false;
+                                })
+                            },500);
+                        }
+
+                    }
+                };
+            },
+            changeRadio(status){
+                this.messageBox = {
+                    show:true,
+                    msg:"环境列表已切换！",
                     cancelText:"好",
-                    msg:"数据列表展示顺序切换成功"
-                }
-                this.$emit('changeVal','dSort',status ? "runFirst":"default")
+                    name:"norBox"
+                };
+                this.$emit('changeVal','ownEnv',status,false,true);
             }
+        },
+        mounted(){
+            this.loginInfo = this.$store.login;
+            this.time = this.$store.dTime;
         }
     }
 </script>
 
 <style scoped>
+    .aboutMe{
+        height:100%;
+        overflow: auto;
+    }
+
     .author{
-        width:100%;
-        position: absolute;
-        bottom:30px;
+        width:95%;
+        margin-top:40px;
     }
     .author p{
+        width:70%;
         color:#9c9c9c;
         font-weight:600;
-        text-align: center;
-        margin-bottom: 3px;
+        margin:0 auto 10px;
     }
 
-    .author p:before{
-        content:"--";
-        margin-right:5px;
+    .author_title{
+        width:45%;
+        font-size:1.4rem;
+        display: inline-block;
     }
 
-    .author p:after{
-        content:"--";
-        margin-left:5px;
+    .author_value{
+        width:55%;
+        font-size:1.2rem;
+        margin-left:10px;
     }
 
     .card_about{
@@ -116,6 +247,22 @@
         height:45px;
         margin-top:10px;
         margin-right:10px;
+    }
+
+    .min_tips{
+        width:100%;
+        font-size:0.5rem;
+        color:#999;
+        position: relative;
+        top:-5px;
+    }
+
+    .min_tips:before{
+        content:"* "
+    }
+
+    .log_btn{
+        margin-top:20px;
     }
 
 </style>

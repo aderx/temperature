@@ -14,6 +14,8 @@ import radio from '@/components/radio'
 import vueAxios from 'vue-axios'
 import axios from 'axios'
 
+import store from './store/index'
+
 Vue.component('v-chart', ECharts);
 
 Vue.component('msg',message);
@@ -27,6 +29,15 @@ Vue.config.productionTip = false;
 
 Vue.use(vueAxios, axios);
 
+Vue.prototype.$store = store;
+
+Vue.prototype.$fetch = function (url,body,then){
+  return fetch(this.$store.url(url),{
+    method:"POST",
+    headers:new Headers({'Content-Type': 'application/json'}),
+    body
+  }).then(d=>d.json()).then(d=>then ? then(d):'')
+};
 
 
 new Vue({

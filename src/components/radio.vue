@@ -16,12 +16,7 @@
         },
         methods:{
             radioChange(){
-                if(!this.status){
-                    this.$emit("changeStatus",true,this.name);
-
-                }else{
-                    this.$emit("changeStatus",false,this.name);
-                }
+                this.$emit("changeStatus",!this.status,this.name);
             },
             statusWatch(status){
                 if(status){

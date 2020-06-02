@@ -28,6 +28,7 @@
         },
         methods:{
             btnClick(val){
+                //判断是否为多级连接弹出层
                 if(val && this.config.times){
                     this.config.times ++;
                 }else{
@@ -36,10 +37,14 @@
                     setTimeout(()=>{
                         //为了避免延时后message切换了，然后在关闭
                         if(this.name === this.config.name){
+                            //判断是否需要运行函数
+                            this.config.func ? this.config.func(val,this.config.name,this.getInput):"";
+                            //隐藏组件
                             this.config.show = false;
                         }
                     },100);
                 }
+                //弹出用户选择的按钮
                 this.$emit('action',val,this.config.name,this.getInput);
                 this.getInput = "";
             }

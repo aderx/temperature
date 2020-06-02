@@ -2,11 +2,11 @@
     <div class="card cardShow">
         <div class="card_Msg">
             <div class="card_sMsg">
-                <h2>{{item.name}}</h2>
-                <p>{{item.msg}}</p>
+                <h2>{{item.info.name}}</h2>
+                <p>{{item.info.msg}}</p>
             </div>
             <div class="card_status">
-                <template v-if="item.run">
+                <template v-if="item.option.run">
                     <span class="card_st card_statusOn">运行中</span>
                 </template>
                 <template v-else>
@@ -17,7 +17,7 @@
         </div>
         <div class="card_temp">
             <div class="card_showTemp">
-                <span :style="'color:#'+showColor+';'">{{item.temp}}</span>
+                <span :style="'color:#'+showColor+';'">{{item.show.temp}}</span>
             </div>
             <p class="card_tempTips">{{showTips}}</p>
         </div>
@@ -35,8 +35,8 @@
         },
         methods:{
             changeColor(){
-                if (this.item.run) {
-                    let temp = this.item.temp;
+                if (this.item.option.run) {
+                    let temp = this.item.show.temp;
                     if (temp <= 0) {
                         this.showColor = "1890FF";
                     } else if(temp <= 20){
@@ -58,8 +58,9 @@
         computed:{
             showTips(){
                 this.changeColor();
-                if(this.item.run){
-                    let temp = this.item.temp;
+                if(this.item.option.run){
+                    let temp = this.item.show.temp;
+                    //展示TIPS内容
                     if (temp <= 0) {
                         return this.tips[1];
                     } else if(temp <= 20){
@@ -78,9 +79,14 @@
                 }
             },
             runTime(){
-                let rightTime = new Date();
-                let oldTime = new Date(this.item.beginTime);
-                return ((((rightTime - oldTime)/1000)/60)/60).toFixed(2);
+                if(this.item.show.beginTime){
+                    let rightTime = new Date();
+                    let oldTime = new Date(this.item.show.beginTime);
+                    return ((((rightTime - oldTime)/1000)/60)/60).toFixed(2);
+                }else{
+                    return '0.00';
+                }
+
             }
         }
     }

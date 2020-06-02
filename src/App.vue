@@ -1,6 +1,9 @@
 <template>
   <div id="app">
-    <router-view class="temp_border"/>
+    <transition name="fade">
+      <router-view class="temp_border"/>
+    </transition>
+
   </div>
 </template>
 
@@ -46,6 +49,20 @@
     box-shadow: 0 0 20px 1px #c1c1c1;
   }
 
+  .page_frame{
+    height:100%;
+    overflow: auto;
+  }
+
+  .page_head{
+    height:10%;
+  }
+
+  .page_content{
+    height:90%;
+    padding:10px;
+  }
+
   .formItem{
     height:40px;
     line-height: 40px;
@@ -65,7 +82,6 @@
     width:70%;
     padding-left:10px;
     border:0;
-    border-bottom:1px solid #ddd;
     height:40px;
     box-sizing: border-box;
     outline: 0;
@@ -97,7 +113,79 @@
   .bigSize span{
     width:40%;
   }
+
   .bigSize input{
     width:60%;
+  }
+
+  .nor_btn{
+    width: 100%;
+    height: 40px;
+  }
+
+  .del_btn {
+    width: 100%;
+    height: 40px;
+    background: #ff1100;
+  }
+
+  .de_btn{
+    background:#9c9c9c;
+  }
+
+  .dividerBar {
+    height: 10px;
+    text-align: center;
+    width: 100%;
+    border-bottom: 1px dotted #ddd;
+    margin: 20px 0;
+  }
+
+  .dividerBar span {
+    background: #fff;
+    padding: 0 10px;
+    letter-spacing: 1px;
+  }
+
+  .subCode button {
+    width: 100%;
+    height: 40px;
+    margin-top: 20px;
+  }
+
+  .showSample {
+    background: #ddd;
+    border-radius: 10px;
+    margin-top: 20px;
+    padding: 10px;
+  }
+
+  .fade-enter-active, .fade-leave-active {
+    transition: opacity .5s;
+  }
+
+  .fade-enter, .fade-leave-to {
+    opacity: 0;
+  }
+
+  .smallInput{
+    width:25%!important;
+    text-align: center;
+    font-size:1.5rem;
+    position: relative;
+  }
+
+  .refresh_move{
+    animation: fresh 20s linear infinite;
+    -webkit-animation-fill-mode:both;
+  }
+
+  @keyframes fresh {
+    from{
+      transform: rotateZ(0deg);
+    }
+    to{
+      transform: rotateZ(3600deg);
+    }
   }
 </style>
